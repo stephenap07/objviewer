@@ -3,255 +3,317 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
-#include <SDL2/SDL_image.h>
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
-std::string getShaderSource(const char * filename) {
-    std::ifstream shaderStream(filename);
-    std::string shaderString;
+#include "Camera.h"
 
-    shaderString.assign(std::istreambuf_iterator<char>(shaderStream),
-                              std::istreambuf_iterator<char>()); 
+namespace util
+{
+  template <typename T>
+  GLsizei stride(std::size_t number)
+  {
+    return number * sizeof(T);
+  }
 
-    shaderStream.close();
-    return shaderString;
+  template <typename T>
+  void *glPtr(std::size_t pos)
+  {
+    return (void *)(pos * sizeof(T));
+  }
 }
 
+std::string getShaderSource(const char *filename);
+
+//==============================================================================
+GLuint createShader(const char *filename, GLenum type)
+{
+  GLuint shader = glCreateShader(type);
+
+  const std::string shaderString = getShaderSource(filename);
+  const GLchar *shaderCStr = (const GLchar *)shaderString.c_str();
+  glShaderSource(shader, 1, &shaderCStr, NULL);
+  glCompileShader(shader);
+
+  GLint shaderStatus;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &shaderStatus);
+
+  if (shaderStatus != GL_TRUE) {
+    std::cerr << "Shader failed to compile!\n";
+    GLint len;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
+    char *buffer = new char[len];
+    glGetShaderInfoLog(shader, len, NULL, buffer);
+    std::cerr << "Error Log for shader shader:\n\n" << buffer << std::endl;
+    delete[] buffer;
+  }
+
+  return shader;
+}
+
+//==============================================================================
+std::string getShaderSource(const char *filename)
+{
+  std::ifstream shaderStream(filename);
+  std::string shaderString;
+
+  shaderString.assign(std::istreambuf_iterator<char>(shaderStream),
+                      std::istreambuf_iterator<char>());
+
+  shaderStream.close();
+  return shaderString;
+}
+
+//==============================================================================
+class Renderer
+{
+public:
+};
+
+//==============================================================================
 int main(int argc, char *argv[])
 {
-    // Initialize SDL
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_Window *window = SDL_CreateWindow("OpenGL", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
-    SDL_GLContext context = SDL_GL_CreateContext(window);
+  // Initialize SDL
+  SDL_Init(SDL_INIT_VIDEO);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  SDL_Window *window = SDL_CreateWindow("OpenGL", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
 
-    // Initialize GLEW
-    glewExperimental = GL_TRUE;
-    glewInit();
+  // Initialize GLEW
+  glewExperimental = GL_TRUE;
+  glewInit();
 
-    // Create Vertex Array Object
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_STENCIL_TEST);
 
-    // Create Vertex Buffer Object
-    GLuint vertexBuffer;
-    glGenBuffers(1, &vertexBuffer);
+  // Create Vertex Array Object
+  GLuint vao;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
 
-    // Create a Vertex Buffer Object and copy the vertex data to it
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
+  // clang-format off
+  GLfloat vertices[] = {
+     -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+     -0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+     -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
 
-    GLfloat vertices[] = {
-    //  Position   Color             Texcoords
-        -0.5f,  0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // Top-left
-         0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // Top-right
-         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // Bottom-right
-        -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, // Bottom-left
-    };
+     -0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+     -0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+     -0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+     -0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+     -0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+     -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+     -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+     -0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+     -0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
 
-    GLuint ebo;
-    glGenBuffers(1, &ebo);
+     0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
 
-    GLuint elements[] = {
-        0, 1, 2,
-        2, 3, 0
-    };
+     -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+     -0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+     -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+     -0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+     -0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+     -0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
 
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    std::string vertString = getShaderSource("vertex.vert");
-    const GLchar* vertexCStr = (const GLchar*)vertString.c_str();
-    glShaderSource(vertexShader, 1, &vertexCStr, NULL);
-    glCompileShader(vertexShader);
+     -1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+      1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+      1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+      1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+     -1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+     -1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+  };
+  // clang-format on
 
-    GLint vertexStatus;
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &vertexStatus);
+  // Create a Vertex Buffer Object and copy the vertex data to it
+  GLuint vbo;
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    if (vertexStatus != GL_TRUE) {
-        std::cerr << "Vertex Shader failed to compile!\n";
-        char buffer[512];
-        glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
-        std::cerr << "Error Log for vertex shader:\n\n" << buffer << std::endl;
-    }
+  GLuint vertexShader = createShader("vertex.vert", GL_VERTEX_SHADER);
+  GLuint fragmentShader = createShader("fragment.frag", GL_FRAGMENT_SHADER);
 
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    std::string fragString = getShaderSource("fragment.frag");
-    const GLchar * fragmentCStr = (const GLchar*)fragString.c_str();
-    glShaderSource(fragmentShader, 1, &fragmentCStr, NULL);
-    glCompileShader(fragmentShader);
+  GLuint shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, vertexShader);
+  glAttachShader(shaderProgram, fragmentShader);
 
-    GLint fragmentStatus;
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &fragmentStatus);
+  glLinkProgram(shaderProgram);
+  glUseProgram(shaderProgram);
 
-    if (fragmentStatus != GL_TRUE) {
-        std::cerr << "Fragment Shader failed to compile!\n";
-        char buffer[512];
-        glGetShaderInfoLog(fragmentShader, 512, NULL, buffer);
-        std::cerr << "Error Log for fragment shader:\n\n" << buffer << std::endl;
-    }
+  auto stride = util::stride<GLfloat>(8);
+  GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+  glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, stride, 0);
+  glEnableVertexAttribArray(posAttrib);
 
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
+  GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
+  glEnableVertexAttribArray(colAttrib);
+  glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, stride, util::glPtr<GLfloat>(3));
 
-    glLinkProgram(shaderProgram);
-    glUseProgram(shaderProgram);
+  GLint texAttrib = glGetAttribLocation(shaderProgram, "texcoord");
+  glEnableVertexAttribArray(texAttrib);
+  glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, stride, util::glPtr<GLfloat>(6));
 
-    GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-    glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 7*sizeof(float), 0);
-    glEnableVertexAttribArray(posAttrib);
+  GLuint textures[2];
+  glGenTextures(2, textures);
 
-    GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
-    glEnableVertexAttribArray(colAttrib);
-    glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, 7*sizeof(float), (void*)(2*sizeof(float)));
-
-    GLint texAttrib = glGetAttribLocation(shaderProgram, "texcoord");
-    glEnableVertexAttribArray(texAttrib);
-    glVertexAttribPointer(texAttrib, 3, GL_FLOAT, GL_FALSE, 7*sizeof(float), (void*)(5*sizeof(float)));
-
-    GLuint textures[2];
-    glGenTextures(2, textures);
-
+  // Load the kitty image
+  {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textures[0]);
-    SDL_Surface *kittySurface = IMG_Load("kitty.png");
-    if (kittySurface == NULL) {
-        std::cerr << "Failed to load image: kitty.png\n";
-        return -1;
-    }
-    int mode = GL_RGB;
-    if (kittySurface->format->BytesPerPixel == 4) {
-        mode = GL_RGBA;
-    }
-    glTexImage2D(GL_TEXTURE_2D, 0, mode, kittySurface->w, kittySurface->h, 0, mode, GL_UNSIGNED_BYTE, kittySurface->pixels);
-    SDL_FreeSurface(kittySurface);
-    glUniform1i(glGetUniformLocation(shaderProgram, "texKitten"), 0);
 
+    int w;
+    int h;
+    int n;
+    unsigned char *kittyImage = stbi_load("kitty.png", &w, &h, &n, 0);
+
+    if (!kittyImage) {
+      std::cerr << "Failed to load image: kitty.png\n";
+      return -1;
+    }
+
+    auto mode = GL_RGB;
+    if (n == 4) {
+      mode = GL_RGBA;
+    }
+
+    glTexImage2D(GL_TEXTURE_2D, 0, mode, w, h, 0, mode, GL_UNSIGNED_BYTE,
+                 kittyImage);
+    stbi_image_free(kittyImage);
+
+    glUniform1i(glGetUniformLocation(shaderProgram, "texKitten"), 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  }
 
+  // Load puppy image
+  {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, textures[1]);
 
-    glm::mat4 model;
-    glm::mat4 scale;;
-    glm::mat4 view;
-    glm::mat4 projection;
+    int w;
+    int h;
+    int n;
+    unsigned char *puppyImage = stbi_load("puppy.png", &w, &h, &n, 0);
 
-    model = glm::rotate(model, 180.0f, glm::vec3(0.0f, 0.0f, 1.0f));
-    view = glm::lookAt(
-        glm::vec3(1.2f, 1.2f, 1.2f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    );
-    projection = glm::perspective(45.0f, 800.0f / 600.0f, 1.0f, 10.0f);
-
-    GLint uniModel = glGetUniformLocation(shaderProgram, "model");
-    GLint uniScale = glGetUniformLocation(shaderProgram, "scale");
-    GLint uniView= glGetUniformLocation(shaderProgram, "view");
-    GLint uniProjection= glGetUniformLocation(shaderProgram, "projection");
-
-    glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(uniScale, 1, GL_FALSE, glm::value_ptr(scale));
-    glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(uniProjection, 1, GL_FALSE, glm::value_ptr(projection));
-
-    SDL_Surface *puppySurface = IMG_Load("puppy.png");
-    if (puppySurface == NULL) {
-        std::cerr << "Failed to load image: puppy.png\n";
-        return -1;
-    }
-    if (puppySurface->format->BytesPerPixel == 4) {
-        mode = GL_RGBA;
+    auto mode = GL_RGB;
+    if (n == 4) {
+      mode = GL_RGBA;
     }
 
-    mode = GL_RGB;
-    if (puppySurface->format->BytesPerPixel == 4) {
-        mode = GL_RGBA;
+    if (!puppyImage) {
+      std::cerr << "Failed to load image: puppy.png\n";
+      return -1;
     }
-    glTexImage2D(GL_TEXTURE_2D, 0, mode, puppySurface->w, puppySurface->h, 0, mode, GL_UNSIGNED_BYTE, puppySurface->pixels);
-    SDL_FreeSurface(puppySurface);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, mode, w, h, 0, mode, GL_UNSIGNED_BYTE,
+                 puppyImage);
+    stbi_image_free(puppyImage);
+
     glUniform1i(glGetUniformLocation(shaderProgram, "texPuppy"), 1);
-
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  }
 
-    GLuint uniTime = glGetUniformLocation(shaderProgram, "time");
+  glm::mat4 model;
+  Camera camera;
 
-    SDL_Event windowEvent;
-    unsigned long currentTime = SDL_GetTicks();
-    unsigned long lastTime = currentTime;
-    float deltaTime = 0;
-    bool rotateX = false;
-    glm::vec3 rotationVec = glm::vec3(0.0f, 0.0f, 1.0f);
+  GLint uniModel      = glGetUniformLocation(shaderProgram, "model");
+  GLint uniView       = glGetUniformLocation(shaderProgram, "view");
+  GLint uniProjection = glGetUniformLocation(shaderProgram, "projection");
+  GLuint uniTime      = glGetUniformLocation(shaderProgram, "time");
 
-    while (true) {
-        if (SDL_PollEvent(&windowEvent)) {
-            if (windowEvent.type == SDL_QUIT) break;
-            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE) {
-                rotateX = !rotateX; 
-            }
-        }
-        // Clear the screen to black
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+  unsigned long currentTime = SDL_GetTicks();
+  unsigned long lastTime = currentTime;
+  float deltaTime = 0;
 
-        currentTime = SDL_GetTicks();
-        deltaTime = ((float)currentTime - (float)lastTime)/1000.0f;
-        lastTime = SDL_GetTicks();
-
-        glUniform1f(uniTime, (GLfloat)currentTime / 1000.0f);
-
-        if (rotateX) {
-            rotationVec = glm::vec3(1.0f, 0.0f, 0.0f);
-        }
-        else {
-            rotationVec = glm::vec3(0.0f, 0.0f, 1.0f);
-        }
-        
-        model = glm::rotate(
-            model,
-            deltaTime * 180.0f,
-            rotationVec
-        );
-        float s = sin(5.0f * (float)currentTime / 1000.0f) * 0.25f + 0.75f;
-        scale = glm::scale(
-            model,
-            glm::vec3(s)
-        );
-        glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(scale));
-
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        SDL_GL_SwapWindow(window);
+  bool quit = false;
+  while (!quit) {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        quit = true;
+      }
+      camera.orbitController(event);
     }
 
-    glDeleteTextures(2, textures);
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    glDeleteBuffers(1, &ebo);
-    glDeleteVertexArrays(1, &vao);
+    // Clear the screen to black
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    SDL_GL_DeleteContext(context);
-    SDL_Quit();
-    return 0;
+    currentTime = SDL_GetTicks();
+    deltaTime = ((float)currentTime - (float)lastTime) / 1000.0f;
+    lastTime = SDL_GetTicks();
+
+    // Models
+    {
+      auto s = glm::scale(model, glm::vec3(1, 1, 1));
+      auto r = glm::rotate(model, 0.0f, glm::vec3(0, 1, 0));
+      auto t = glm::translate(model, glm::vec3(0, 0, 0));
+      auto m = t * r * s;
+
+      glUniform1f(uniTime, 0.0f);
+      glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(m));
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
+    {
+      auto s = glm::scale(model, glm::vec3(1, -1, 1));
+      auto r = glm::rotate(model, 0.0f, glm::vec3(0, 1, 0));
+      auto t = glm::translate(model, glm::vec3(0, 1, 0));
+      auto m = t * r * s;
+
+      glUniform1f(uniTime, (GLfloat)currentTime / 1000.0f);
+      glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(m));
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
+    // Camera
+    glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(camera.viewMatrix()));
+    glUniformMatrix4fv(uniProjection, 1, GL_FALSE, glm::value_ptr(camera.projectionMatrix()));
+
+    SDL_GL_SwapWindow(window);
+  }
+
+  glDeleteTextures(2, textures);
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+  glDeleteVertexArrays(1, &vao);
+
+  SDL_GL_DeleteContext(context);
+  SDL_Quit();
+  return 0;
 }
