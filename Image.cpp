@@ -31,7 +31,7 @@ void Image::loadFromFile(const std::string filename)
    }
    if (!data_)
    {
-      std::cerr << "Failed to load image: kitty.png\n";
+      std::cerr << "Failed to load image: " << filename << '\n';
    }
 }
 
