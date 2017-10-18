@@ -39,6 +39,7 @@ bool Texture::isValid() const
 //==============================================================================
 void Texture::setImage(Image& image)
 {
+   glActiveTexture(GL_TEXTURE0);
    glBindTexture(target_, handle_);
    glTexImage2D(target_, 0, image.mode(), image.width(), image.height(), 0, image.mode(), GL_UNSIGNED_BYTE, image.data());
 }
@@ -55,7 +56,7 @@ void Texture::setImageFromFile(const std::string& filename)
 //==============================================================================
 void Texture::setFilteringLinear()
 {
-	bind();
+   bind();
    glTexParameteri(target_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
    glTexParameteri(target_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
    glTexParameteri(target_, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

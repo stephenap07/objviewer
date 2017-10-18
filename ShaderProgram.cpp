@@ -35,6 +35,7 @@ void ShaderProgram::link()
    {
       glDeleteProgram(handle_);
    }
+
    handle_ = glCreateProgram();
 
    glAttachShader(handle_, vertexShader_.handle);
@@ -71,8 +72,7 @@ void ShaderProgram::setUniformMatrix4fv(const std::string& uniformName,
    GLint uniHandle = glGetUniformLocation(handle_, uniformName.c_str());
    if (uniHandle == -1)
    {
-      std::cerr << "Error: no uniform named " << uniformName << " for shader "
-                << handle_ << '\n';
+      std::cerr << "Error: no uniform named " << uniformName << " for shader " << handle_ << '\n';
       return;
    }
    glUniformMatrix4fv(uniHandle, 1, GL_FALSE, glm::value_ptr(value));
@@ -85,8 +85,7 @@ void ShaderProgram::setUniform1f(const std::string& uniformName, const float& va
    GLint uniHandle = glGetUniformLocation(handle_, uniformName.c_str());
    if (uniHandle == -1)
    {
-      std::cerr << "Error: no uniform named " << uniformName << " for shader "
-                << handle_ << '\n';
+      std::cerr << "Error: no uniform named " << uniformName << " for shader " << handle_ << '\n';
       return;
    }
    glUniform1f(uniHandle, value);

@@ -35,8 +35,8 @@ struct BoundingBox
    glm::vec3 centerTranslate() const
    {
       return glm::vec3(-0.5 * (bmax[0] + bmin[0]),
-											 -0.5 * (bmax[1] + bmin[1]),
-											 -0.5 * (bmax[2] + bmin[2]));
+         -0.5 * (bmax[1] + bmin[1]),
+         -0.5 * (bmax[2] + bmin[2]));
    }
 
    glm::vec3 bmin;
@@ -53,7 +53,7 @@ struct Renderable
 
 struct ModelSurface
 {
-   BoundingBox bb;
+   BoundingBox boundingBox;
    std::vector<int> renderables;
 };
 

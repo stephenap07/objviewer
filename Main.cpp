@@ -11,72 +11,78 @@
 #include <thread>
 
 //==============================================================================
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-  // Initialize SDL
-  SDL_Init(SDL_INIT_VIDEO);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_Window *window = SDL_CreateWindow("OBJ Viewer", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
-  SDL_GLContext context = SDL_GL_CreateContext(window);
+   // Initialize SDL
+   SDL_Init(SDL_INIT_VIDEO);
+   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+   SDL_Window* window = SDL_CreateWindow("OBJ Viewer", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
+   SDL_GLContext context = SDL_GL_CreateContext(window);
 
-  // Initialize GLEW
-  glewExperimental = GL_TRUE;
-  glewInit();
+   // Initialize GLEW
+   glewExperimental = GL_TRUE;
+   glewInit();
 
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_STENCIL_TEST);
+   glEnable(GL_DEPTH_TEST);
+   glEnable(GL_STENCIL_TEST);
 
-  Renderer renderer;
-  renderer.initialize();
+   Renderer renderer;
+   renderer.initialize();
 
-  unsigned long currentTime = SDL_GetTicks();
-  unsigned long lastTime = currentTime;
-  float deltaTime = 0;
+   unsigned long currentTime = SDL_GetTicks();
+   unsigned long lastTime = currentTime;
+   float deltaTime = 0;
 
-  FileWatcher watcher("shader/obj/");
-  std::thread producerThread(&FileWatcher::run, &watcher);
+   FileWatcher watcher("shader/obj/");
+   std::thread producerThread(&FileWatcher::run, &watcher);
 
-  bool quit = false;
-  while (!quit) {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_QUIT) {
-        quit = true;
+   bool quit = false;
+   while (!quit)
+   {
+      SDL_Event event;
+      while (SDL_PollEvent(&event))
+      {
+         if (event.type == SDL_QUIT)
+         {
+            quit = true;
+         }
+         if (event.type == SDL_KEYDOWN)
+         {
+            switch (event.key.keysym.sym)
+            {
+            case SDLK_l:
+               renderer.objProgram().recompile();
+               break;
+            }
+         }
+         renderer.camera().orbitController(event);
       }
-      if (event.type == SDL_KEYDOWN) {
-        switch (event.key.keysym.sym) {
-        case SDLK_l:
-          renderer.objProgram().recompile();
-          break;
-        }
+
+      Buffer& b = watcher.buffer();
+      while (b.hasItem())
+      {
+         renderer.objProgram().recompile();
+         b.removeAll();
       }
-      renderer.camera().orbitController(event);
-    }
 
-    Buffer& b = watcher.buffer();
-    while (b.hasItem()) {
-      renderer.objProgram().recompile();
-      b.removeAll();
-    }
+      currentTime = SDL_GetTicks();
+      deltaTime = static_cast<float>(currentTime - lastTime) / 1000.0f;
+      lastTime = SDL_GetTicks();
 
-    currentTime = SDL_GetTicks();
-    deltaTime = ((float)currentTime - (float)lastTime) / 1000.0f;
-    lastTime = SDL_GetTicks();
+      //renderer.add(obj);
 
-    //renderer.add(obj);
+      renderer.render();
 
-    renderer.render();
+      SDL_GL_SwapWindow(window);
+   }
 
-    SDL_GL_SwapWindow(window);
-  }
+   SDL_GL_DeleteContext(context);
+   SDL_Quit();
 
-  SDL_GL_DeleteContext(context);
-  SDL_Quit();
+   watcher.doQuit();
+   producerThread.join();
 
-  watcher.doQuit();
-  producerThread.join();
-
-  return 0;
+   return 0;
 }

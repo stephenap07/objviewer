@@ -53,7 +53,7 @@ void Renderer::render()
 
       for (auto r : modelSurfaces_[m.modelSurfaceId].renderables)
       {
-         textures_[materials_[renderables_[r].materialId].diffuseTexname].bind();
+			objProgram_.setTexture(0, "tex", textures_[materials_[renderables_[r].materialId].diffuseTexname]);
          glBindVertexArray(renderables_[r].vao);
          glDrawArrays(GL_TRIANGLES, 0, 3 * renderables_[r].numTriangles);
       }
@@ -78,11 +78,11 @@ void Renderer::initialize()
    for (std::size_t i = 0; i < modelSurfaces_.size(); ++i)
    {
       auto& m = modelSurfaces_[i];
-      auto e = m.bb.maxExtent();
+      auto e = m.boundingBox.maxExtent();
       glm::mat4 model;
-      auto s = glm::scale(model, glm::vec3(m.bb.maxExtent()) / 2.0f);
+      auto s = glm::scale(model, glm::vec3(m.boundingBox.maxExtent()) / 2.0f);
       auto r = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
-      auto t = glm::translate(model, m.bb.centerTranslate());
+      auto t = glm::translate(model, m.boundingBox.centerTranslate());
       renderEntities_.push_back(RenderEntity{ i, t * r * s });
    }
 }
@@ -214,12 +214,12 @@ ModelSurface Renderer::loadObjAndConvert(const std::string& filename,
             v[1][k] = attrib.vertices[3 * f1 + k];
             v[2][k] = attrib.vertices[3 * f2 + k];
 
-            model.bb.bmin[k] = std::min(v[0][k], model.bb.bmin[k]);
-            model.bb.bmin[k] = std::min(v[1][k], model.bb.bmin[k]);
-            model.bb.bmin[k] = std::min(v[2][k], model.bb.bmin[k]);
-            model.bb.bmax[k] = std::max(v[0][k], model.bb.bmax[k]);
-            model.bb.bmax[k] = std::max(v[1][k], model.bb.bmax[k]);
-            model.bb.bmax[k] = std::max(v[2][k], model.bb.bmax[k]);
+            model.boundingBox.bmin[k] = std::min(v[0][k], model.boundingBox.bmin[k]);
+            model.boundingBox.bmin[k] = std::min(v[1][k], model.boundingBox.bmin[k]);
+            model.boundingBox.bmin[k] = std::min(v[2][k], model.boundingBox.bmin[k]);
+            model.boundingBox.bmax[k] = std::max(v[0][k], model.boundingBox.bmax[k]);
+            model.boundingBox.bmax[k] = std::max(v[1][k], model.boundingBox.bmax[k]);
+            model.boundingBox.bmax[k] = std::max(v[2][k], model.boundingBox.bmax[k]);
          }
 
          // Normals
@@ -306,9 +306,9 @@ ModelSurface Renderer::loadObjAndConvert(const std::string& filename,
       model.renderables.push_back(renderables_.size() - 1);
       ++shapeIndex;
 
-      std::cout << "bmin = " << model.bb.bmin[0] << ", " << model.bb.bmin[1] << ", " << model.bb.bmin[2] << '\n';
-      std::cout << "bmax = " << model.bb.bmax[0] << ", " << model.bb.bmax[1] << ", " << model.bb.bmax[2] << '\n';
-		std::cout << "maxextent = " << model.bb.maxExtent() << '\n';
+      std::cout << "bmin = " << model.boundingBox.bmin[0] << ", " << model.boundingBox.bmin[1] << ", " << model.boundingBox.bmin[2] << '\n';
+      std::cout << "bmax = " << model.boundingBox.bmax[0] << ", " << model.boundingBox.bmax[1] << ", " << model.boundingBox.bmax[2] << '\n';
+		std::cout << "maxextent = " << model.boundingBox.maxExtent() << '\n';
    }
 
    return model;
