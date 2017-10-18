@@ -12,8 +12,11 @@
 struct BoundingBox
 {
    BoundingBox();
-   float bmin[3];
-   float bmax[3];
+
+   glm::vec3 extent() const
+   {
+      return (bmax - bmin) / 2.0f;
+   }
 
    float maxExtent() const
    {
@@ -31,10 +34,13 @@ struct BoundingBox
 
    glm::vec3 centerTranslate() const
    {
-      return glm::normalize(glm::vec3(-0.5 * (bmax[0] + bmin[0]),
-         -0.5 * (bmax[1] + bmin[1]),
-         -0.5 * (bmax[2] + bmin[2])));
+      return glm::vec3(-0.5 * (bmax[0] + bmin[0]),
+											 -0.5 * (bmax[1] + bmin[1]),
+											 -0.5 * (bmax[2] + bmin[2]));
    }
+
+   glm::vec3 bmin;
+   glm::vec3 bmax;
 };
 
 struct Renderable
@@ -67,7 +73,8 @@ struct Material
       : ambient(glm::vec3(m.ambient[0], m.ambient[1], m.ambient[2]))
       , diffuse(glm::vec3(m.diffuse[0], m.diffuse[1], m.diffuse[2]))
       , specular(glm::vec3(m.specular[0], m.specular[1], m.specular[2]))
-      , transmittance(glm::vec3(m.transmittance[0], m.transmittance[1], m.transmittance[2]))
+      , transmittance(glm::vec3(
+           m.transmittance[0], m.transmittance[1], m.transmittance[2]))
       , emission(glm::vec3(m.emission[0], m.emission[1], m.emission[2]))
       , shininess(m.shininess)
       , ior(m.ior)
@@ -106,8 +113,8 @@ public:
 
    void initialize();
 
-   ModelSurface loadObjAndConvert(const std::string& filename,
-      const std::string& basedir);
+   ModelSurface loadObjAndConvert(
+      const std::string& filename, const std::string& basedir);
 
    Camera& camera() { return camera_; }
 

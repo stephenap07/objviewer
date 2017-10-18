@@ -53,6 +53,7 @@ void Renderer::render()
 
       for (auto r : modelSurfaces_[m.modelSurfaceId].renderables)
       {
+         textures_[materials_[renderables_[r].materialId].diffuseTexname].bind();
          glBindVertexArray(renderables_[r].vao);
          glDrawArrays(GL_TRIANGLES, 0, 3 * renderables_[r].numTriangles);
       }
@@ -65,20 +66,21 @@ void Renderer::render()
 //==============================================================================
 void Renderer::initialize()
 {
-   // Push back default material.
-   materials_.push_back(Material());
-
    initializeShaders();
    //modelSurfaces_.push_back(loadObjAndConvert("models/cube.obj", "models/"));
-   modelSurfaces_.push_back(loadObjAndConvert("models/bunny.obj", "models/"));
+   modelSurfaces_.push_back(loadObjAndConvert("models/capsule.obj", "models/"));
+   //modelSurfaces_.push_back(loadObjAndConvert("models/bunny.obj", "models/"));
    //modelSurfaces_.push_back(loadObjAndConvert("models/cornell_box.obj", "models/"));
+
+   // Push back default material.
+   materials_.push_back(Material());
 
    for (std::size_t i = 0; i < modelSurfaces_.size(); ++i)
    {
       auto& m = modelSurfaces_[i];
       auto e = m.bb.maxExtent();
       glm::mat4 model;
-      auto s = glm::scale(model, glm::vec3(1.0f / e, 1.0f / e, 1.0f / e));
+      auto s = glm::scale(model, glm::vec3(m.bb.maxExtent()) / 2.0f);
       auto r = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
       auto t = glm::translate(model, m.bb.centerTranslate());
       renderEntities_.push_back(RenderEntity{ i, t * r * s });
@@ -119,7 +121,15 @@ ModelSurface Renderer::loadObjAndConvert(const std::string& filename,
       std::cerr << "Failed to load " << filename << std::endl;
    }
 
+   std::cout << "# of verticies " << attrib.vertices.size() / 3 << '\n';
+   std::cout << "# of normals " << attrib.normals.size() / 3 << '\n';
+   std::cout << "# of texcoords " << attrib.texcoords.size() / 2 << '\n';
+   std::cout << "# of materials " << materials.size() << '\n';
+   std::cout << "# of shapes " << shapes.size() << '\n';
+
    ModelSurface model;
+
+   std::cout << "Found " << materials.size() - 1 << " materials\n";
 
    // Load diffuse textures.
    for (const auto& m : materials)
@@ -127,11 +137,16 @@ ModelSurface Renderer::loadObjAndConvert(const std::string& filename,
       materials_.push_back(m);
       if (m.diffuse_texname.length())
       {
+         std::cout << "Loading diffuse " << m.diffuse_texname << '\n';
          Texture texture;
          texture.setImageFromFile(m.diffuse_texname);
          texture.setFilteringLinear();
          textures_.insert(std::make_pair<std::string, Texture>(
             std::string(m.diffuse_texname), std::move(texture)));
+      }
+      else if (m.name.size())
+      {
+         std::cout << "Loading material " << m.name << '\n';
       }
    }
 
@@ -238,6 +253,7 @@ ModelSurface Renderer::loadObjAndConvert(const std::string& filename,
             vb.push_back(v[i][0]);
             vb.push_back(v[i][1]);
             vb.push_back(v[i][2]);
+
             vb.push_back(n[i][0]);
             vb.push_back(n[i][1]);
             vb.push_back(n[i][2]);
@@ -273,9 +289,10 @@ ModelSurface Renderer::loadObjAndConvert(const std::string& filename,
          glGenBuffers(1, &r.vb);
          glBindBuffer(GL_ARRAY_BUFFER, r.vb);
          glBufferData(GL_ARRAY_BUFFER, vb.size() * sizeof(float), &vb.at(0), GL_STATIC_DRAW);
-         r.numTriangles = vb.size() / (11 * 3);
+         const std::size_t numElements(11);
+         r.numTriangles = vb.size() / numElements / 3;
 
-         const auto stride = util::stride<GLfloat>(11);
+         const auto stride = util::stride<GLfloat>(numElements);
          objProgram_.enableVertexAttrib("position", 3, GL_FLOAT, stride, 0);
          objProgram_.enableVertexAttrib("normal", 3, GL_FLOAT, stride, util::toGlPtr<GLfloat>(3));
          objProgram_.enableVertexAttrib("diffuse", 3, GL_FLOAT, stride, util::toGlPtr<GLfloat>(6));
@@ -288,6 +305,10 @@ ModelSurface Renderer::loadObjAndConvert(const std::string& filename,
       renderables_.emplace_back(std::move(r));
       model.renderables.push_back(renderables_.size() - 1);
       ++shapeIndex;
+
+      std::cout << "bmin = " << model.bb.bmin[0] << ", " << model.bb.bmin[1] << ", " << model.bb.bmin[2] << '\n';
+      std::cout << "bmax = " << model.bb.bmax[0] << ", " << model.bb.bmax[1] << ", " << model.bb.bmax[2] << '\n';
+		std::cout << "maxextent = " << model.bb.maxExtent() << '\n';
    }
 
    return model;

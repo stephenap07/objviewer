@@ -15,14 +15,20 @@ uniform mat4 view;
 uniform mat4 projection;
 
 void main() {
-  float normalFactor = 0.8;
+  float normalFactor = 0.2;
   float diffuseFactor = 1.0 - normalFactor;
 
-  Color = vec3(normal.x * normalFactor + diffuse.x * diffuseFactor,
-               normal.y * normalFactor + diffuse.y * diffuseFactor,
-	             normal.z * normalFactor + diffuse.z * diffuseFactor);
+  Normal = normalize(normal);
+
+  Color = vec3(Normal.x * normalFactor + diffuse.x * diffuseFactor,
+               Normal.y * normalFactor + diffuse.y * diffuseFactor,
+	             Normal.z * normalFactor + diffuse.z * diffuseFactor);
+
+  Color = normalize(Color);
+
+	Color = vec3(Color.x * 0.5 + 0.5, Color.y * 0.5 + 0.5, Color.z * 0.5 + 0.5);
+
   Texcoord = texcoord; 
-  Normal = normal;
 
   gl_Position = projection * view * model * vec4(position, 1.0); 
 }

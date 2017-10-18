@@ -3,3 +3,4 @@ objviewer
 *.swp
 .DS_Store
 obj
+ignore
