@@ -31,6 +31,7 @@ public:
   ShaderProgram &operator=(const ShaderProgram &) = delete;
 
   void create();
+  void destroy();
   void link();
   void bind();
   void recompile();

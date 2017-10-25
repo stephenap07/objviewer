@@ -35,8 +35,10 @@ int main(int argc, char* argv[])
    unsigned long lastTime = currentTime;
    float deltaTime = 0;
 
+   /*
    FileWatcher watcher("shader/obj/");
    std::thread producerThread(&FileWatcher::run, &watcher);
+   */
 
    bool quit = false;
    while (!quit)
@@ -53,19 +55,21 @@ int main(int argc, char* argv[])
             switch (event.key.keysym.sym)
             {
             case SDLK_l:
-               renderer.objProgram().recompile();
+               //renderer.objProgram().recompile();
                break;
             }
          }
          renderer.camera().orbitController(event);
       }
 
+      /*
       Buffer& b = watcher.buffer();
       while (b.hasItem())
       {
          renderer.objProgram().recompile();
          b.removeAll();
       }
+      */
 
       currentTime = SDL_GetTicks();
       deltaTime = static_cast<float>(currentTime - lastTime) / 1000.0f;
@@ -81,8 +85,10 @@ int main(int argc, char* argv[])
    SDL_GL_DeleteContext(context);
    SDL_Quit();
 
+   /*
    watcher.doQuit();
    producerThread.join();
+   */
 
    return 0;
 }

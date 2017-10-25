@@ -11,10 +11,14 @@ Texture::Texture()
 {
 }
 
+Texture::Texture(const std::string& aFilename)
+{
+   setImageFromFile(aFilename);
+}
+
 //==============================================================================
 Texture::~Texture()
 {
-   glDeleteTextures(1, &handle_);
 }
 
 //==============================================================================
@@ -22,6 +26,12 @@ void Texture::create()
 {
    glGenTextures(1, &handle_);
    target_ = GL_TEXTURE_2D;
+}
+
+//==============================================================================
+void Texture::destroy()
+{
+   glDeleteTextures(1, &handle_);
 }
 
 //==============================================================================
@@ -42,15 +52,21 @@ void Texture::setImage(Image& image)
    glActiveTexture(GL_TEXTURE0);
    glBindTexture(target_, handle_);
    glTexImage2D(target_, 0, image.mode(), image.width(), image.height(), 0, image.mode(), GL_UNSIGNED_BYTE, image.data());
+   setFilteringLinear();
 }
 
 //==============================================================================
-void Texture::setImageFromFile(const std::string& filename)
+bool Texture::setImageFromFile(const std::string& filename)
 {
    create();
    Image image;
    image.loadFromFile(filename);
-   setImage(image);
+   if (image.data())
+   {
+      setImage(image);
+      return true;
+   }
+   return false;
 }
 
 //==============================================================================

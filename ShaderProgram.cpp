@@ -29,6 +29,12 @@ void ShaderProgram::create()
 }
 
 //==============================================================================
+void ShaderProgram::destroy()
+{
+   glDeleteProgram(handle_);
+}
+
+//==============================================================================
 void ShaderProgram::link()
 {
    if (handle_)
@@ -65,8 +71,7 @@ void ShaderProgram::recompile()
 }
 
 //==============================================================================
-void ShaderProgram::setUniformMatrix4fv(const std::string& uniformName,
-   const glm::mat4& value)
+void ShaderProgram::setUniformMatrix4fv(const std::string& uniformName, const glm::mat4& value)
 {
    glUseProgram(handle_);
    GLint uniHandle = glGetUniformLocation(handle_, uniformName.c_str());
@@ -98,15 +103,16 @@ void ShaderProgram::setTexture(int index, const std::string& name, const Texture
    glActiveTexture(GL_TEXTURE0 + index);
    texture.bind();
    auto attr = glGetUniformLocation(handle_, name.c_str());
+   if (attr == -1)
+   {
+      std::cerr << "Error: no uniform named " << name << " for shader " << handle_ << '\n';
+      return;
+   }
    glUniform1i(attr, index);
 }
 
 //==============================================================================
-void ShaderProgram::enableVertexAttrib(const std::string& name,
-   std::size_t count,
-   GLenum type,
-   int stride,
-   util::glPtr ptr)
+void ShaderProgram::enableVertexAttrib(const std::string& name, std::size_t count, GLenum type, int stride, util::glPtr ptr)
 {
    glUseProgram(handle_);
    GLint attr = glGetAttribLocation(handle_, name.c_str());

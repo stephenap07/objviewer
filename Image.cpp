@@ -24,14 +24,28 @@ Image::~Image()
 //==============================================================================
 void Image::loadFromFile(const std::string filename)
 {
-   data_ = stbi_load(filename.c_str(), &width_, &height_, &channels_, 0);
-   if (channels_ == 4)
+   data_ = stbi_load(filename.c_str(), &width_, &height_, &channels_, STBI_default);
+
+   if (channels_ == 3)
+   {
+      mode_ = GL_RGB;
+   }
+   else if (channels_ == 4)
    {
       mode_ = GL_RGBA;
    }
+   else
+   {
+      std::cerr << "Channels not supported: " << channels_ << '\n';
+   }
+
    if (!data_)
    {
       std::cerr << "Failed to load image: " << filename << '\n';
+   }
+   else
+   {
+      //std::cout << "Loaded image " << filename << " width " << width_ << " height " << height_ << " channels " << channels_ << '\n';
    }
 }
 

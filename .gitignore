@@ -1,6 +1,17 @@
+# Binary
 objviewer
-*.swo
-*.swp
+
+# Vim files
+*.sw[A-z]
+
+# OpenGL trace files
+*.trace
+
+# Mac osx files
 .DS_Store
+
+# Source build artifacts
 obj
+
+# Free directory
 ignore

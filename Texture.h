@@ -10,23 +10,24 @@ class Texture
 {
 public:
    Texture();
-
+   Texture(const std::string& aFilename);
    ~Texture();
 
    Texture(Texture&&) = default;
-   Texture(const Texture&) = delete;
-   Texture& operator=(const Texture&) = delete;
+   Texture(Texture const&) = delete;
+   void operator=(Texture const&) = delete;
 
    void create();
+   void destroy();
    bool isValid() const;
    void bind() const;
 
-   void setImage(Image& image);
-   void setImageFromFile(const std::string& value);
+   void setImage(Image& aImage);
+   bool setImageFromFile(const std::string& aFilename);
    void setFilteringLinear();
 
-   void setHandle(const GLuint& value) { handle_ = value; }
-   void setTarget(const GLuint& value) { target_ = value; }
+   void setHandle(const GLuint& aValue) { handle_ = aValue; }
+   void setTarget(const GLuint& aValue) { target_ = aValue; }
 
    const GLuint& handle() const { return handle_; }
    const GLenum& target() const { return target_; }

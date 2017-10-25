@@ -7,11 +7,13 @@ union SDL_Event;
 class Camera
 {
 public:
+
    Camera();
 
    glm::vec3 direction() const;
    glm::mat4 viewMatrix() const;
    glm::mat4 projectionMatrix() const;
+   glm::mat4 orthographicMatrix() const;
    glm::mat4 viewProjectionMatrix() const;
    void normalizeTarget();
    void orbitController(const SDL_Event& e);
@@ -29,7 +31,13 @@ public:
    const float& nearClip() const { return nearClip_; }
 
    void setFarClip(float aValue) { farClip_ = aValue; }
-   const float farClip() const { return farClip_; }
+   const float& farClip() const { return farClip_; }
+
+   void setWidth(float aValue) { width_ = aValue; }
+   const float& height() const { return height_; }
+
+   void setOrthoSize(float aValue) { orthoSize_ = aValue; }
+   const float& orthoSize() const { return orthoSize_; }
 
 private:
    glm::vec3 position_;
@@ -37,4 +45,7 @@ private:
    float fieldOfView_;
    float nearClip_;
    float farClip_;
+   float width_;
+   float height_;
+   float orthoSize_;
 };

@@ -13,6 +13,9 @@ Camera::Camera()
    , fieldOfView_(glm::radians(45.0f))
    , nearClip_(0.1f)
    , farClip_(512.0f)
+   , width_(800.0f)
+   , height_(600.0f)
+   , orthoSize_(1.0f)
 {
 }
 
@@ -31,7 +34,13 @@ glm::mat4 Camera::viewMatrix() const
 //==============================================================================
 glm::mat4 Camera::projectionMatrix() const
 {
-   return glm::perspective(fieldOfView_, 800.0f / 600.0f, nearClip_, farClip_);
+   return glm::perspective(fieldOfView_, width_ / height_, nearClip_, farClip_);
+}
+
+//==============================================================================
+glm::mat4 Camera::orthographicMatrix() const
+{
+   return glm::ortho(0.0f, orthoSize_, orthoSize_ * (height_ / width_), 0.0f, nearClip_, farClip_);
 }
 
 //==============================================================================
@@ -68,6 +77,7 @@ void Camera::orbitController(const SDL_Event& e)
       break;
    case SDL_MOUSEWHEEL:
       position_ = position_ + -static_cast<float>(e.wheel.y) * 0.5f * glm::normalize(position_);
+      orthoSize_ = orthoSize_ + -static_cast<float>(e.wheel.y) * 0.5f;
       break;
    }
 
